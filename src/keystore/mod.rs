@@ -322,7 +322,7 @@ pub fn save_keyfile(kf: KeyFile)  -> Result<(),KeystoreError>{
     let json = serde_json::to_string(&kf)?;
     let ks = Keystore::new(&name);
     let path = ks.build_path(&name);
-
+    println!("{:?}",path);
     let mut file = File::create(&path)?;
     file.write_all(json.as_ref()).ok();
     Ok(())
