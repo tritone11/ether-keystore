@@ -23,7 +23,12 @@ use rand::{OsRng, Rng};
 use std::convert::From;
 use std::str::FromStr;
 use std::{cmp, fmt};
+use std::ffi::OsStr;
 use uuid::Uuid;
+use std::path::{Path, PathBuf};
+use std::fs::{self, read_dir, File};
+use std::io::{Read, Write};
+use std::io;
 
 /// Key derivation function salt length in bytes
 pub const KDF_SALT_BYTES: usize = 32;
@@ -32,6 +37,36 @@ pub const KDF_SALT_BYTES: usize = 32;
 pub const CIPHER_IV_BYTES: usize = 16;
 
 byte_array_struct!(Salt, KDF_SALT_BYTES);
+
+
+#[derive(Debug)]
+pub enum KeystoreError {
+    /// General storage error
+    StorageError(String),
+
+    /// `KeyFile` not found
+    NotFound(String),
+}
+
+impl From<serde_json::Error> for KeystoreError {
+    fn from(err: serde_json::Error) -> Self {
+        KeystoreError::StorageError(err.to_string())
+    }
+}
+
+impl From<io::Error> for KeystoreError {
+    fn from(err: io::Error) -> Self {
+        KeystoreError::StorageError(err.to_string())
+    }
+}
+
+
+/// Filesystem storage for `KeyFiles`
+///
+pub struct Keystore {
+    /// Parent directory for storage
+    base_path: PathBuf,
+}
 
 /// A keystore file (account private core encrypted with a passphrase)
 #[derive(Deserialize, Debug, Clone, Eq)]
@@ -62,6 +97,30 @@ pub struct KeyFile {
 pub enum CryptoType {
     /// normal Web3 Secret Storage
     Core(CoreCrypto)
+}
+
+impl Keystore {
+    /// Create new `FsStorage`
+    /// Uses specified path as parent folder
+    ///
+    /// # Arguments:
+    ///
+    /// * dir - parent folder
+    ///
+    pub fn new<P>(dir: P) -> Keystore
+    where
+        P: AsRef<Path> + AsRef<OsStr>,
+    {
+        Keystore {
+            base_path: PathBuf::from(&dir),
+        }
+    }
+
+    fn build_path(&self, name: &str) -> PathBuf {
+        let mut path = self.base_path.clone();
+        path.push(name);
+        path
+    }
 }
 
 impl KeyFile {
@@ -257,3 +316,14 @@ pub fn os_random() -> OsRng {
 pub fn generate_filename(uuid: &str) -> String {
     format!("UTC--{}Z--{}", &timestamp(), &uuid)
 }  
+
+pub fn save_keyfile(kf: KeyFile)  -> Result<(),KeystoreError>{
+    let name = generate_filename(&kf.uuid.to_string());
+    let json = serde_json::to_string(&kf)?;
+    let ks = Keystore::new(&name);
+    let path = ks.build_path(&name);
+
+    let mut file = File::create(&path)?;
+    file.write_all(json.as_ref()).ok();
+    Ok(())
+}
