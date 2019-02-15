@@ -3,6 +3,10 @@ name = "ether-keystore"
 version = "0.1.0"
 authors = ["tritone11 <tritone11>"]
 edition = "2018"
+description = "Rust crate for creating and unlocking of Ethereum keystores"
+repository = "https://github.com/tritone11/ether-keystore"
+keywords = ["keystore", "rust","ether","ethereum"]
+license = "GPL-2.0-or-later"
 
 [lib]
 name = "ethereum_keystore"
