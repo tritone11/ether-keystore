@@ -1,6 +1,5 @@
 //! # Core domain logic module errors
 
-use ethabi;
 use hex;
 use secp256k1;
 use std::{error, fmt};
@@ -11,8 +10,6 @@ pub enum Error {
     /// Invalid ABI
     InvalidABI(String),
 
-    /// Invalid ABI Token
-    InvalidABIToken(ethabi::token::Error),
 
     /// An invalid length
     InvalidLength(usize),
@@ -25,30 +22,6 @@ pub enum Error {
 
     /// ECDSA crypto error
     EcdsaCrypto(secp256k1::Error),
-}
-
-impl From<ethabi::Error> for Error {
-    fn from(err: ethabi::Error) -> Self {
-        Error::InvalidABI(format!("Invalid ABI {:?}", err))
-    }
-}
-
-impl From<ethabi::spec::Error> for Error {
-    fn from(err: ethabi::spec::Error) -> Self {
-        Error::InvalidABI(format!("Invalid ABI Spec {:?}", err))
-    }
-}
-
-impl From<ethabi::token::Error> for Error {
-    fn from(err: ethabi::token::Error) -> Self {
-        Error::InvalidABIToken(err)
-    }
-}
-
-impl From<ethabi::spec::param_type::Error> for Error {
-    fn from(err: ethabi::spec::param_type::Error) -> Self {
-        Error::InvalidABI(format!("Invalid ABI Param {:?}", err))
-    }
 }
 
 impl From<hex::FromHexError> for Error {
@@ -67,7 +40,6 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::InvalidABI(ref str) => write!(f, "Invalid ABI: {}", str),
-            Error::InvalidABIToken(ref err) => write!(f, "Invalid ABI Token: {:?}", err),
             Error::InvalidLength(len) => write!(f, "Invalid length: {}", len),
             Error::InvalidHexLength(ref str) => write!(f, "Invalid hex data length: {}", str),
             Error::UnexpectedHexEncoding(ref err) => {
