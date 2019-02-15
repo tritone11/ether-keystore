@@ -60,12 +60,111 @@ impl From<io::Error> for KeystoreError {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct AccountInfo {
+    /// File name for `KeyFile`
+    pub filename: String,
+
+    /// Address of account
+    pub address: String,
+
+    /// Optional name for account
+    pub name: String,
+
+    /// Optional description for account
+    pub description: String,
+
+    /// shows whether it is normal account or
+    /// held by HD wallet
+    pub is_hardware: bool,
+
+    /// show if account hidden from 'normal' listing
+    /// `normal` - not forcing to show hidden accounts
+    pub is_hidden: bool,
+}
+
+impl From<KeyFile> for AccountInfo {
+    fn from(kf: KeyFile) -> Self {
+        let mut info = Self::default();
+        info.address = kf.address.to_string();
+
+        if let Some(name) = kf.name {
+            info.name = name;
+        };
+
+        if let Some(desc) = kf.description {
+            info.description = desc;
+        };
+
+        if let Some(visible) = kf.visible {
+            info.is_hidden = !visible;
+        };
+
+
+        info
+    }
+}
 
 /// Filesystem storage for `KeyFiles`
 ///
 pub struct Keystore {
     /// Parent directory for storage
     base_path: PathBuf,
+}
+
+pub trait KeyfileStorage: Send + Sync {
+
+    /// Lists info for `Keystore` files inside storage
+    /// Can include hidden files if flag set.
+    ///
+    /// # Arguments
+    ///
+    /// * `showHidden` - flag to show hidden `Keystore` files
+    ///
+    /// # Return:
+    ///
+    /// Array of `AccountInfo` struct
+    ///
+    fn list_accounts(&self, show_hidden: bool) -> Result<Vec<AccountInfo>, KeystoreError>;
+
+    
+    
+}
+
+impl KeyfileStorage for Keystore {
+    fn list_accounts(&self, show_hidden: bool) -> Result<Vec<AccountInfo>, KeystoreError> {
+        let mut accounts = vec![];
+        for e in read_dir(&self.base_path)? {
+            if e.is_err() {
+                continue;
+            }
+            let entry = e.unwrap();
+            let mut content = String::new();
+            if let Ok(mut keyfile) = File::open(entry.path()) {
+                if keyfile.read_to_string(&mut content).is_err() {
+                    continue;
+                }
+
+                match KeyFile::decode(&content) {
+                    Ok(kf) => {
+                        if kf.visible.is_none() || kf.visible.unwrap() || show_hidden {
+                            let mut info = AccountInfo::from(kf);
+                            match entry.path().file_name().and_then(|s| s.to_str()) {
+                                Some(name) => {
+                                    info.filename = name.to_string();
+                                    accounts.push(info);
+                                }
+                                None => info!("Corrupted filename for: {:?}", entry.file_name()),
+                            }
+                        }
+                    }
+                    Err(_) => info!("Invalid keystore file format for: {:?}", entry.file_name()),
+                }
+            }
+        }
+
+        Ok(accounts)
+    }
 }
 
 /// A keystore file (account private core encrypted with a passphrase)
