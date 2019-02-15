@@ -18,7 +18,7 @@ pub use self::serialize::{
     try_extract_address, CoreCrypto, Iv, Mac, SerializableKeyFileCore
 };
 use super::core::{self, Address, PrivateKey};
-use super::util::{self, keccak256, to_arr, KECCAK256_BYTES};
+use super::util::{self, keccak256, to_arr, KECCAK256_BYTES,timestamp};
 use rand::{OsRng, Rng};
 use std::convert::From;
 use std::str::FromStr;
@@ -253,3 +253,7 @@ impl fmt::Display for KeyFile {
 pub fn os_random() -> OsRng {
     OsRng::new().expect("Expect OS specific random number generator")
 } 
+
+pub fn generate_filename(uuid: &str) -> String {
+    format!("UTC--{}Z--{}", &timestamp(), &uuid)
+}  
