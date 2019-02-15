@@ -317,10 +317,10 @@ pub fn generate_filename(uuid: &str) -> String {
     format!("UTC--{}Z--{}", &timestamp(), &uuid)
 }  
 
-pub fn save_keyfile(kf: KeyFile)  -> Result<(),KeystoreError>{
+pub fn save_keyfile(kf: KeyFile,p_path: &str)  -> Result<(),KeystoreError>{
     let name = generate_filename(&kf.uuid.to_string());
     let json = serde_json::to_string(&kf)?;
-    let ks = Keystore::new(&name);
+    let ks = Keystore::new(&p_path);
     let path = ks.build_path(&name);
     println!("{:?}",path);
     let mut file = File::create(&path)?;
