@@ -26,7 +26,7 @@ use std::{cmp, fmt};
 use std::ffi::OsStr;
 use uuid::Uuid;
 use std::path::{Path, PathBuf};
-use std::fs::{self, read_dir, File};
+use std::fs::{self, read_dir, File,create_dir_all};
 use std::io::{Read, Write};
 use std::io;
 
@@ -323,7 +323,14 @@ pub fn save_keyfile(kf: KeyFile,p_path: &str)  -> Result<(),KeystoreError>{
     let ks = Keystore::new(&p_path);
     let path = ks.build_path(&name);
     println!("{:?}",path);
-    let mut file = File::create(&path)?;
-    file.write_all(json.as_ref()).ok();
+    if Path::new(p_path).exists() {
+        let mut file = File::create(&path)?;
+        file.write_all(json.as_ref()).ok();
+    } else {
+        let _r = fs::create_dir_all(p_path);
+        let mut file = File::create(&path)?;
+        file.write_all(json.as_ref()).ok();
+    }
+    
     Ok(())
 }
